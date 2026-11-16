@@ -4,7 +4,7 @@ import { formInputs, loginPage, passwordInput, safeLoginForm, usernameInput,
 
 /** Bundled with its helpers into the unprivileged page; only the chosen login is ever sent here. */
 export function passwordPage(options: PasswordPageOptions): unknown {
-  if (window.top !== window || location.protocol !== 'https:') return null;
+  if (window.top !== window || !['http:', 'https:'].includes(location.protocol)) return null;
   const page = loginPage();
   if (options.action === 'install') return installPasswordCapture(options);
   if (options.action === 'take') {
