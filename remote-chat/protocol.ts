@@ -22,6 +22,7 @@ export interface Channel {
   onMessage(callback: (data: string, endpoints?: import('./connectionEndpoints').ConnectionEndpoints) => void): void;
 }
 export interface Peer {
+  readonly nativeSyncHandle?: { peer: string; channel: string };
   offer(): Promise<void>;
   accept(signal: Exclude<Signal, { kind: 'key' }>): Promise<void>;
   close(): void;

@@ -30,6 +30,7 @@ export class RtcPeer implements Peer {
   private incoming = Promise.resolve();
   private closed = false;
   private readonly observer: RtcObserver;
+  get nativeSyncHandle() { return (this.pc as RTCPeerConnection & Pick<Peer, 'nativeSyncHandle'>).nativeSyncHandle; }
 
   constructor(private readonly options: PeerOptions, create: () => RTCPeerConnection) {
     this.pc = create();
