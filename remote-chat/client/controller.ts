@@ -329,6 +329,7 @@ export class ChatController {
     this.queueConnection.reset();
     if (mode === 'offline') {
       this.directory.disconnect();
+      this.update({ groupLoading: {} });
       this.threadList.invalidate();
       this.skillGeneration += 1;
       this.composer.reset();
@@ -576,8 +577,13 @@ export class ChatController {
 
   loadGroup = async (groupId: string, more = false) => {
     if (!this.directory.enabled) return;
+    const generation = this.synchronization;
+    this.update({ groupLoading: { ...this.state.groupLoading, [groupId]: true } });
     try { await this.directory.read({ archived: this.state.archived, search: this.state.search, groupId }, more); }
     catch (error) { this.failure(error, 'list'); }
+    finally {
+      if (generation === this.synchronization) this.update({ groupLoading: { ...this.state.groupLoading, [groupId]: false } });
+    }
   };
 
   private applyQueue(queue: QueueSnapshot) {
@@ -670,7 +676,7 @@ export class ChatController {
     const changedScope = search !== this.state.search || archived !== this.state.archived;
     if (changedScope) {
       this.directoryViews.clear();
-      this.update({ groupCursors: {} });
+      this.update({ groupCursors: {}, groupLoading: {} });
       const cached = this.threadList.peek({ search, archived });
       this.update({ search, archived, threads: cached?.data ?? [], cursor: cached?.nextCursor ?? null });
     }

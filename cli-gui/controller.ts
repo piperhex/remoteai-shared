@@ -214,11 +214,11 @@ export class CliController {
         .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)) });
     }));
   }
-  loadMoreSessions = async () => {
+  loadMoreSessions = async (engines: readonly ExternalEngine[] = ['claude', 'gemini']) => {
     if (this.state.listLoading) return;
     this.patch({ listLoading: true });
     try {
-      await Promise.all((['claude', 'gemini'] as const).filter(engine => this.state.listMore?.[engine])
+      await Promise.all(engines.filter(engine => this.state.listMore?.[engine])
         .map(engine => this.synchronizeLists(engine, true)));
     } catch (error) { this.report(error); }
     finally { this.patch({ listLoading: false }); }
