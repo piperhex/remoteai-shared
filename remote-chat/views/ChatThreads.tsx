@@ -23,6 +23,8 @@ import { remoteSidebarDrag } from '../client/sidebarDrag';
 import { CliThreadRow } from '../../cli-gui/CliThreadRow';
 import { useCliSidebar } from '../../cli-gui/useCliSidebar';
 import { useCliGui } from '../../cli-gui/context';
+import { CliListMore } from '../../cli-gui/CliListMore';
+import { GroupPageButton } from '../../chat/directory/GroupPageButton';
 
 interface Props {
   state: ChatState; controller: ChatController; newChat: (project?: ChatProject) => void; onClose: () => void;
@@ -115,11 +117,18 @@ function ChatThreadsContent({ state, controller, newChat, onClose, openSearch, p
           {group.canToggle && <button type="button" className="chat-group-more" aria-expanded={group.expanded}
             aria-label={`${group.expanded ? t("client.chat.collapse") : t("client.chat.showMore.83ad87")}：${group.label}`} onClick={() => toggle(group.id)}>
             {group.expanded ? t("client.chat.collapse") : t("client.chat.showMore.83ad87")}</button>}
+          {group.kind === 'group' && !group.collapsed && <GroupPageButton className="chat-group-more"
+            enabled={state.directorySync && ready} cursor={state.groupCursors?.[group.id.slice(6)]}
+            load={async more => {
+              await controller.loadGroup(group.id.slice(6), more);
+              if (!group.expanded) toggle(group.id);
+            }} />}
           </div>
         </section>)}
       {!sidebar.threads.length && <p className="chat-empty chat-muted">
         {ready ? t("client.chat.noChatsYet") : t("client.chat.connectToYourComputerToViewChats")}</p>}
       <div className="chat-thread-pagination">
+        <CliListMore className="chat-group-more" />
         {pagination.loadingMore && <span role="status" className="chat-muted chat-row">
           <LoaderCircle size={16} className="chat-spinner" aria-hidden="true" />{t("client.projectBrowser.loading")}</span>}
         {state.cursor && pagination.failed && <button type="button" className="chat-button"

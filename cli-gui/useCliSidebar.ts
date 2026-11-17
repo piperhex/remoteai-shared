@@ -16,7 +16,11 @@ export function useCliSidebar({ threads, archived, query = '' }: {
 }) {
   const cli = useCliGui();
   const sessions = cli?.state.sessions;
-  useEffect(() => { cli?.controller.filter(archived); }, [archived, cli?.controller]);
+  useEffect(() => { cli?.controller.filter(archived, query); }, [archived, query, cli?.controller]);
+  useEffect(() => {
+    cli?.controller.setListVisible(true);
+    return () => cli?.controller.setListVisible(false);
+  }, [cli?.controller]);
   const entries = useMemo(() => new Map((sessions ?? [])
     .filter(session => session.archived === archived
       && `${session.title} ${session.cwd}`.toLowerCase().includes(query.trim().toLowerCase()))
