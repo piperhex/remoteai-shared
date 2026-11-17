@@ -175,6 +175,8 @@ export class HotLink {
     if (this.nativePackets) {
       const delivery = frame as DeliveryData & { lane?: string };
       return this.nativePackets.send({ text, compress: this.compressionEnabled && data,
+        target: path === 'direct' ? this.channel?.nativeChatTarget : undefined,
+        sendFailed: () => { this.lastPong.direct = 0; this.fallback(); },
         key: data ? `${path}:${delivery.lane ?? 'ordered'}:${delivery.sequence}` : undefined,
         write: payload => { this.writePacket(path, payload, data); } });
     }

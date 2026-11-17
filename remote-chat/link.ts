@@ -29,6 +29,10 @@ class LegacyChatLink {
     mode: () => this.mode,
     send: async (part, delivered) => {
       if (!this.cipher) throw new Error('正在连接电脑。');
+      const target = !this.relay && this.channel?.nativeChatTarget;
+      if (target && isNativeSession(this.cipher) && this.cipher.sendDirect) {
+        await this.cipher.sendDirect(target, part); delivered?.(); return;
+      }
       const payload = await this.cipher.encrypt(part);
       if (this.closed) return;
       if (this.relay && !this.quotaBlocked) {
