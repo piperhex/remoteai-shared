@@ -17,6 +17,7 @@ import { TerminalPane, nativeDrop } from '../views/TerminalPanel';
 import { MAX_TERMINAL_TABS } from '../views/useTerminalPanel';
 import type { TerminalApi, TerminalInfo } from '../types';
 import { useRecentSshProfiles, useSshSessions } from './useSshSessions';
+import { ServerMonitor } from './ServerMonitor';
 import './workspace.css';
 
 interface Props {
@@ -116,6 +117,7 @@ export function SshWorkspace({ api, active, available, scope, host, login }: Pro
         </div>
       </div>
     </div>
+    {current && <ServerMonitor key={current.id} id={current.id} api={ssh} enabled={active && available && !current.exited} />}
     {active && editor && <SshConnectionDialog key={editor} api={ssh} projectCwd={SSH_WORKSPACE} manage={editor === 'manage'}
       settingsOnly={editor === 'new' && !available} allowConnect={available && !limit}
       connected={adopt} dispose={api.close} changed={() => void saved.refresh()} close={closeDialog} />}

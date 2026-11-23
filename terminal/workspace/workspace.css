@@ -66,6 +66,18 @@
 .sshw-quick button span { flex: 1; min-width: 0; }
 .sshw-quick strong, .sshw-quick small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sshw-quick small { margin-top: 3px; color: var(--ssh-muted); }
+.sshw-monitor { display: flex; align-items: stretch; flex: none; flex-wrap: wrap; background: var(--ssh-subtle);
+  color: var(--ssh-text); border-top: 1px solid var(--ssh-line); font-size: .94em; }
+.sshm-title, .sshm-values, .sshm-values > span, .sshm-status { display: flex; align-items: center; }
+.sshm-title { gap: 7px; padding: 8px 14px; color: var(--ssh-accent); }
+.sshm-values { flex: 1; min-width: 0; flex-wrap: wrap; padding: 4px 2px; row-gap: 3px; }
+.sshm-values > span { gap: 6px; padding: 3px 12px; white-space: nowrap; border-inline-start: 1px solid var(--ssh-line); }
+.sshm-values svg { width: 1.1em; height: 1.1em; color: var(--ssh-muted); }
+.sshm-values b { font-weight: 600; }
+.sshm-values output { font-variant-numeric: tabular-nums; }
+.sshm-meter { height: 4px; width: 28px; border-radius: 3px; background: var(--ssh-line); overflow: hidden; }
+.sshm-meter i { display: block; height: 100%; background: var(--ssh-accent); }
+.sshm-status { padding-inline: 10px; color: var(--ssh-muted); }
 @container (max-width: 630px) {
   .sshw-body { grid-template-columns: minmax(180px, 36%) minmax(0, 1fr); }
   .sshw-header { padding: 8px 12px; }
