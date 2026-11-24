@@ -83,6 +83,10 @@ export interface Item {
 }
 export interface AsyncQuestion { title: string; options?: string[] | null }
 export interface Turn {
+  reviewCwd?: string;
+  reviewIncomplete?: boolean;
+  reviewEdits?: Item[];
+  workspaceObservation?: { paths: string[]; complete: boolean };
   id: string; status: string; items: Item[]; startedAt?: number | null;
   error?: import("./requestError").RequestError | null;
   retryError?: import("./requestError").RequestError;

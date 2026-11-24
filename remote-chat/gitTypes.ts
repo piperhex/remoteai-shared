@@ -21,6 +21,7 @@ export interface GitConflict {
 }
 export interface GitResolution { cwd: string; path: string; version: string; content: string | null }
 export interface GitDiff { text: string; truncated: boolean }
+export type GitReviewScope = 'staged' | 'unstaged';
 export interface GitCommitFile { path: string; originalPath: string | null; status: string }
 export interface GitCommit {
   repository?: string; repositoryPath?: string;
@@ -74,7 +75,7 @@ export interface GitClient {
   repository: (cwd: string, includeChildren?: boolean) => Promise<GitRepository>;
   action: (request: GitActionRequest) => Promise<void>;
   changes: (cwd: string) => Promise<GitChanges>;
-  diff: (cwd: string, path: string, commit?: string) => Promise<GitDiff>;
+  diff: (cwd: string, path: string, commit?: string, scope?: GitReviewScope) => Promise<GitDiff>;
   history: (cwd: string, skip: number) => Promise<GitHistory>;
   commitFiles: (cwd: string, commit: string) => Promise<GitCommitFile[]>;
   commit: (request: GitCommitRequest) => Promise<{ hash: string }>;
