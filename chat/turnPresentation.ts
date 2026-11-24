@@ -18,6 +18,7 @@ const entryCache = new WeakMap<Turn, Map<string, TurnEntry[]>>();
 
 /** Rejected or still-running edits are not completed file changes. A net diff takes precedence. */
 export function completedTurnFiles(turn: Turn) {
+  if (turn.reviewDeferred) return [];
   if (typeof turn.diff === 'string') return parseDiff(turn.diff);
   const items = turn.reviewEdits?.length && turn.status !== 'inProgress' ? turn.reviewEdits : processOutputs(turn.items);
   return changedFiles(items.filter((item) => item.type === 'fileChange'
@@ -26,7 +27,7 @@ export function completedTurnFiles(turn: Turn) {
 }
 
 function hasSummary(turn: Turn) {
-  return Boolean(turn.plan?.length || typeof turn.diff === 'string' || turn.reviewIncomplete
+  return Boolean(turn.plan?.length || typeof turn.diff === 'string' || turn.reviewIncomplete || turn.reviewDeferred
     || turn.status === 'interrupted' || turn.status === 'failed' || completedTurnFiles(turn).length
     || processOutputs(turn.items).some((item) => item.type === 'imageGeneration'
       && item.status === 'completed' && !item.failure));

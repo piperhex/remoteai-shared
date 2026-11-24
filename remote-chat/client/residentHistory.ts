@@ -22,7 +22,7 @@ function previewTurn(turn: Turn): Turn {
   const trimDiff = historyChars(turn.diff) > TOOL_PREVIEW_CHARS;
   const trimEdits = historyChars(turn.reviewEdits) > TOOL_PREVIEW_CHARS;
   return { ...turn, diff: trimDiff ? undefined : turn.diff, reviewEdits: trimEdits ? [] : turn.reviewEdits,
-    reviewIncomplete: turn.reviewIncomplete || trimDiff || trimEdits,
+    reviewIncomplete: turn.reviewIncomplete || (!turn.reviewDeferred && (trimDiff || trimEdits)),
     planExplanation: turn.planExplanation && historyPreview(turn.planExplanation),
     plan: historyChars(turn.plan) <= TOOL_PREVIEW_CHARS ? turn.plan : undefined,
     error: historyChars(turn.error) <= TOOL_PREVIEW_CHARS ? turn.error : undefined,

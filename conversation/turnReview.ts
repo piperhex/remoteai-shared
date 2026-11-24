@@ -12,6 +12,7 @@ export function turnReview(turn?: Turn, threadId?: string): TurnReview {
   let result: TurnReview['result'] = 'incomplete';
   if (!turn?.reviewIncomplete && typeof turn?.diff === 'string') result = turn.diff.trim() ? 'net' : 'empty';
   else if (!turn?.reviewIncomplete && toolEdits) result = 'tools';
-  return { threadId, turnId: turn?.id, cwd: turn?.reviewCwd, summary: summary?.slice(0, 100), result,
+  return { threadId, turnId: turn?.id, cwd: turn?.reviewCwd, summary: summary?.slice(0, 100),
+    result: turn?.reviewDeferred ?? result, deferred: Boolean(turn?.reviewDeferred),
     observation: turn?.workspaceObservation, activity: edits.map(item => (item.changes ?? []).map(change => change.path)) };
 }

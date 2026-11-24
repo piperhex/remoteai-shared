@@ -30,7 +30,10 @@ export function ChatTurnSummary({ turn, threadId, onOpen, hideStopped = false }:
     && item.status === 'completed' && !item.failure).map(generatedImageSource).filter(Boolean))];
   const running = turn.status === 'inProgress';
   return <section className="chat-turn-summary">
-    {!running && !files.length && (review.result === 'empty' || turn.reviewIncomplete) && <TurnReviewNotice review={review} />}
+    {!running && !files.length && (review.deferred || review.result === 'empty' || turn.reviewIncomplete)
+      && <TurnReviewNotice review={review} />}
+    {!running && review.deferred && reviewAvailable && <button type="button" className="chat-task-result"
+      onClick={() => onOpen('result')}>{t('client.taskReview.reviewResult')}</button>}
     {generated.map(source => <ChatImage key={source} source={source} description={t("client.chat.generatedImage")} />)}
     {!!turn.plan?.length && <button type="button" className="chat-plan-summary" aria-label={t("client.chat.viewTaskPlan")}
       onClick={() => onOpen('plan')}><strong>{t("client.chat.taskPlan")}</strong>

@@ -8,7 +8,8 @@ export interface TurnReview {
   threadId?: string; turnId?: string; cwd?: string; summary?: string;
   observation?: import('./types').Turn['workspaceObservation'];
   activity?: string[][];
-  result: 'empty' | 'tools' | 'incomplete' | 'net';
+  deferred?: boolean;
+  result: import('./savedReview').ReviewResult;
 }
 export interface DiffPanelEntry {
   id: string; title: string; files: readonly DiffFile[]; status?: string; filePath?: string;

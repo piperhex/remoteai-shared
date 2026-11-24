@@ -65,6 +65,7 @@ export interface GitRevisionPrompt extends Omit<GitRevisionRequest, 'cwd' | 'mod
   subject: string; cwd?: string;
 }
 export interface GitClient {
+  savedReview?: import('../conversation/savedReview').ReadSavedReview;
   commitAndPush?: (request: GitCommitRequest) => Promise<{ hash: string }>;
   conflict: (cwd: string, path: string) => Promise<GitConflict>;
   resolveConflict: (request: GitResolution) => Promise<void>;

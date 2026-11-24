@@ -87,6 +87,8 @@ export function createGuiToolsClient(request: <T>(body: object) => Promise<T>,
     reconnect: () => request<void>({ operation: 'guiReconnect' }),
     workspace: (input: GitRequest) => request<GitStatus>({ operation: 'guiGitWorkspace', request: input }),
     git: {
+      savedReview: (target: import('../conversation/savedReview').SavedReviewTarget) =>
+        request<import('../conversation/savedReview').SavedReviewPage>({ ...target, operation: 'savedTurnReview' }),
       conflict: (cwd: string, path: string) => request<GitConflict>({ operation: 'guiGitConflict', cwd, path }),
       resolveConflict: (input: GitResolution) => request<void>({ ...input, operation: 'guiGitResolveConflict' }),
       continueIntegration: (cwd: string, version: string) =>
