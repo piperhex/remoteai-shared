@@ -57,7 +57,7 @@ export interface BrowserWindowProps {
 export function BrowserContents(props: BrowserWindowProps & {
   fullscreen: boolean; toggleFullscreen: () => void; embedded?: boolean; actions?: ReactNode;
   mainBrowser?: boolean; windowControls?: ReactNode;
-  onPageNavigate?: (id: string, url: string) => void; history?: ReactNode;
+  onPageNavigate?: (id: string, url: string) => void; tabBarStart?: ReactNode;
 }) {
   return <BrowserOverlayProvider><BrowserContentsView {...props} /></BrowserOverlayProvider>;
 }
@@ -149,7 +149,7 @@ function BrowserContentsView(props: Parameters<typeof BrowserContents>[0]) {
   }, [tabs]);
   return <>
     {!compact && <div className="pm-browser-titlebar" data-tauri-drag-region={props.windowControls ? true : undefined}>
-    {props.history}
+    {props.tabBarStart}
     <BrowserTabs tabs={tabs} activeId={activeId} visible={open} t={t} language={props.language} visits={records.visits}
       windowDragRegion={Boolean(props.windowControls)} select={props.onSelect} close={props.onCloseTab}
       closeTabs={props.onCloseTabs} menuChanged={setMenuOpen} />
