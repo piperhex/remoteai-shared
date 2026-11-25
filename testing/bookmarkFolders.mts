@@ -29,6 +29,7 @@ export async function verifyBookmarkFolders(page: Page, info: TestInfo, options:
     clip: { x: 0, y: 0, width: narrow ? 980 : 1280, height: 330 }, animations: 'disabled' });
   await page.mouse.click(blank.x, blank.y, { button: 'right' });
   await expect(newFolder).toBeVisible();
+  await expect(page.locator('.browser-bookmark-menu:visible')).not.toHaveClass(/-appear|-enter/);
   await capture('new-folder');
   await newFolder.click();
   const dialog = page.getByRole('dialog', { name: '书签文件夹' });
@@ -64,6 +65,7 @@ export async function verifyBookmarkFolders(page: Page, info: TestInfo, options:
   const contents = page.locator('.browser-bookmark-menu:visible').getByRole('menuitem');
   await expect(contents).toHaveCount(2);
   await expect(contents.first()).toHaveText('使用指南');
+  await expect(page.locator('.browser-bookmark-menu:visible')).not.toHaveClass(/-appear|-enter/);
   await capture('folder-contents');
   await contents.last().click();
   await expect(address).toHaveValue('https://example.test/design');
