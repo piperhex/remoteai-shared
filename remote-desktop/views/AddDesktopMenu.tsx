@@ -11,7 +11,7 @@ export function AddDesktopMenu({ devices, openDesktop }: {
   const [open, setOpen] = useState(false);
   const label = t('client.settings.chooseAComputer');
   const gesture = useThreadLongPress(() => setOpen(true));
-  return <Dropdown open={open} onOpenChange={setOpen} trigger={['click']} placement="bottomRight" autoFocus
+  return <Dropdown open={open} onOpenChange={setOpen} trigger={['click']} placement="bottomLeft" autoFocus
     overlayClassName="rd-add-desktop-menu" menu={{ 'aria-label': label,
       items: devices.length ? devices.map(device => ({
         key: device.deviceId, icon: <Monitor size={15} />, disabled: !device.online,
