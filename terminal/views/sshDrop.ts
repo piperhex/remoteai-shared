@@ -7,8 +7,9 @@ interface NativeFile { token: string; name: string; size: number }
 type Reply = { type: 'files'; files: NativeFile[] } | { type: 'data'; data: string } | { type: 'done' };
 const command = (request: object) => invoke<Reply>('codex_gui_ssh_drop_files', { request });
 
-export const subscribeSshFileDrop: SubscribeFileDrop | undefined = isTauri()
-  ? listener => getCurrentWebview().onDragDropEvent(event => listener(event.payload)) : undefined;
+const subscribe: SubscribeFileDrop = listener => getCurrentWebview().onDragDropEvent(event => listener(event.payload));
+// Only desktop entry points supply this adapter. Embedded websites can also see the Tauri marker.
+export const nativeSshDrop = isTauri() ? { subscribe, read: nativeSshUploadBatch } : undefined;
 
 /** Keep OS paths on the sending computer, even when the SSH session runs on another PC. */
 export async function nativeSshUploadBatch(paths: string[]): Promise<SshUploadBatch> {
