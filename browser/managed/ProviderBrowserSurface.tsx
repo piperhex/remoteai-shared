@@ -5,6 +5,7 @@ import { Globe } from 'lucide-react';
 import type { BrowserSurfaceProps } from '../../provider-market/ProviderBrowser';
 import type { BrowserPageTitle } from '../../provider-market/browserState';
 import { nativeBrowserSession } from './providerBrowserSession';
+import { browserMappings } from '../../port-mapping/browserMappings';
 import { nativeSurfaceBounds, type NativePageFullscreenEvent } from './nativeSurfaceSession';
 import { browserOverlayAttributes, hasBrowserOverlay } from './browserOverlays';
 import { BrowserFrame } from './BrowserFrame';
@@ -62,6 +63,7 @@ export function ProviderBrowserSurface(props: BrowserSurfaceProps) {
       });
     };
     refresh.current = sync;
+    const stopMappings = browserMappings.subscribe(sync);
     const unlisten = listen<{ url?: string; title?: string; popup?: boolean; loading?: boolean;
       visited?: boolean; icons?: string[]; pageTitle?: BrowserPageTitle } & NativeZoomEvent & NativePageFullscreenEvent>(
       `provider-browser-${tab.id}`, ({ payload }) => {
@@ -98,7 +100,7 @@ export function ProviderBrowserSurface(props: BrowserSurfaceProps) {
     document.addEventListener('visibilitychange', sync);
     sync();
     return () => {
-      refresh.current = undefined; cancelAnimationFrame(frame); observer.disconnect(); overlays.disconnect();
+      stopMappings(); refresh.current = undefined; cancelAnimationFrame(frame); observer.disconnect(); overlays.disconnect();
       window.removeEventListener('resize', sync); document.removeEventListener('visibilitychange', sync);
       window.removeEventListener('scroll', sync, true); document.removeEventListener('animationend', sync, true);
       // Listener registration failure is already surfaced above; cleanup has nothing to remove then.
