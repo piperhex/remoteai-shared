@@ -42,14 +42,14 @@ export function observeLoginSubmissions(options: PasswordPageOptions) {
     // A command may clear or disable the fields before cancelling the submit button's default action.
     const login = readLogin(form, true);
     if (!login) return;
+    const validBeforeClick = !form.matches(':invalid');
     pending.set(form, login);
     window.setTimeout(() => {
       if (pending.get(form) !== login) return;
       pending.delete(form);
-      // A JavaScript login may accept a short username in an email field and disable it during submission.
-      if (event.defaultPrevented && !form.matches(':invalid') && safeLoginForm(form, control)) {
-        offerLogin(options, login);
-      }
+      if (!event.defaultPrevented || !safeLoginForm(form, control)) return;
+      // Login commands may clear required fields or accept and disable a short username in an email field.
+      if (validBeforeClick || !form.matches(':invalid')) offerLogin(options, login);
     }, 0);
   }, true);
 }
