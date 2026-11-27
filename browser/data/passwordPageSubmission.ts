@@ -38,7 +38,7 @@ export function observeLoginSubmissions(options: PasswordPageOptions) {
 
   document.addEventListener('click', event => {
     const control = clickedSubmitter(event), form = control?.form;
-    if (!form || !safeLoginForm(form, control) || form.matches(':invalid')) return;
+    if (!form || !safeLoginForm(form, control)) return;
     // A command may clear or disable the fields before cancelling the submit button's default action.
     const login = readLogin(form, true);
     if (!login) return;
@@ -46,7 +46,10 @@ export function observeLoginSubmissions(options: PasswordPageOptions) {
     window.setTimeout(() => {
       if (pending.get(form) !== login) return;
       pending.delete(form);
-      if (event.defaultPrevented && safeLoginForm(form, control)) offerLogin(options, login);
+      // A JavaScript login may accept a short username in an email field and disable it during submission.
+      if (event.defaultPrevented && !form.matches(':invalid') && safeLoginForm(form, control)) {
+        offerLogin(options, login);
+      }
     }, 0);
   }, true);
 }
