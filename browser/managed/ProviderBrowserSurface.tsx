@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { isTauri, invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { Globe } from 'lucide-react';
+import { useDesktopLayout } from '../../layout/useDesktopLayout';
+import { uiText } from '../../localization/uiText';
+import { pageUrl } from '../../provider-market/pageLink';
 import type { BrowserSurfaceProps } from '../../provider-market/ProviderBrowser';
 import type { BrowserPageTitle } from '../../provider-market/browserState';
 import { nativeBrowserSession } from './providerBrowserSession';
@@ -30,6 +33,12 @@ export function ProviderBrowserSurface(props: BrowserSurfaceProps) {
   const [attempt, setAttempt] = useState(0);
   const [pageFullscreen, setPageFullscreen] = useState(false);
   const desktop = isTauri();
+  const wide = useDesktopLayout();
+  const address = !desktop && wide ? pageUrl(tab.url) : null;
+  // A browser never exposes a cross-origin iframe's TLS failure to its parent. A top-level
+  // navigation lets the browser present its own certificate prompt for the same address.
+  const openHttps = address?.protocol === 'https:' && <a href={address.href}
+    target="_blank" rel="noopener noreferrer">{uiText('client.workspaceActions.openInBrowser')}</a>;
   const { image, preview } = useNativeBrowserPreview();
   const latest = { tab, active, pageFullscreen, onNavigate, onPopup, onLoadingChange, obscured,
     onVisit: props.onVisit, onPageTitle: props.onPageTitle };
@@ -126,9 +135,10 @@ export function ProviderBrowserSurface(props: BrowserSurfaceProps) {
     {desktop && image && !feedback && <img className="native-browser-overlay-preview" src={image}
       alt="" aria-hidden draggable={false} />}
     {feedback && <div className="pm-browser-feedback" role="status"><Globe size={32} /><p>{t(feedback)}</p>
+      {failed && openHttps}
       {failed && <button onClick={() => { setFailed(false); setAttempt((value) => value + 1); }}>
         {t('market.retry')}</button>}</div>}
     {!feedback && !desktop && <BrowserFrame {...props} key={attempt} onError={() => setFailed(true)} />}
-    {!desktop && !feedback && <div className="pm-browser-web-notice">{t('market.browserWebNotice')}</div>}
+    {!desktop && !feedback && <div className="pm-browser-web-notice">{t('market.browserWebNotice')} {openHttps}</div>}
   </div></BrowserInspector>;
 }
