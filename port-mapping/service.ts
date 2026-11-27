@@ -23,7 +23,7 @@ const RETRY_DELAY_MS = 5_000;
 const LOCAL_ERRORS = new Set(['本地端口已被占用，请换一个端口。', '无法监听本地端口，请换一个端口重试。',
   '请更新应用后使用端口映射。', '请返回应用后重新启动映射。',
   'UDP 映射未能启动，请确认两端应用均已更新。', MAPPING_UPDATE_REQUIRED, MAPPING_RECONNECT_REQUIRED]);
-type MappingTarget = Pick<PortMapping, 'remoteHost' | 'remotePort' | 'localPort' | 'protocol' | 'localDomain'>;
+type MappingTarget = Omit<PortMapping, 'id' | 'updatedAt'>;
 
 /** One manager per authenticated computer; switching chat threads never releases its mappings. */
 export class PortForwardingService {
@@ -92,7 +92,8 @@ export class PortForwardingService {
     const normalized = this.validate(target, id);
     // Keep an explicit clear queued until the server has acknowledged it.
     const localDomain = normalized.localDomain ?? (previous.localDomain === undefined ? undefined : '');
-    const entry = { id, ...normalized, localDomain, updatedAt: Date.now() };
+    const linkProtocol = normalized.linkProtocol ?? previous.linkProtocol;
+    const entry = { id, ...normalized, localDomain, linkProtocol, updatedAt: Date.now() };
     const applied = this.applyConfig(entry, previous);
     this.changed(id, entry);
     await applied;
@@ -111,12 +112,12 @@ export class PortForwardingService {
 
   private applyConfig(config: PortMapping, previous?: ForwardingEntry) {
     if (!previous || !sameTarget(previous, config)) return this.replace(config);
-    const { id, localDomain, updatedAt } = config;
-    if (previous.localDomain !== localDomain || previous.updatedAt !== updatedAt) {
+    const { id, localDomain, linkProtocol, updatedAt } = config;
+    if (previous.localDomain !== localDomain || previous.linkProtocol !== linkProtocol || previous.updatedAt !== updatedAt) {
       const job = this.running.get(id);
       const applied = job && previous.status === 'running' && previous.localDomain !== localDomain
         ? job.tunnels.setBrowserDomain?.(localDomain) : undefined;
-      this.update(id, { localDomain, updatedAt });
+      this.update(id, { localDomain, linkProtocol, updatedAt });
       if (applied && job) return applied.then(() => {
         if (this.running.get(id) === job) this.publish(this.entries);
       }, () => this.fail(id, job, START_ERROR));

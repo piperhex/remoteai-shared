@@ -19,12 +19,17 @@ export class BrowserMappingStore {
   private entries: BrowserMapping[] = [];
 
   snapshot = () => this.entries;
-  matches(url: URL) {
+  findAddress(url: URL) {
     const port = url.port || (url.protocol === 'https:' ? '443' : '80');
-    return this.entries.some(entry => {
+    for (const entry of this.entries) {
       const mapped = new URL(entry.url);
-      return mapped.hostname === url.hostname && (mapped.port || '80') === port;
-    });
+      if (mapped.hostname === url.hostname && (mapped.port || (mapped.protocol === 'https:' ? '443' : '80')) === port) {
+        return mapped;
+      }
+    }
+  }
+  matches(url: URL) {
+    return !!this.findAddress(url);
   }
   subscribe = (listener: () => void) => {
     this.listeners.add(listener);
