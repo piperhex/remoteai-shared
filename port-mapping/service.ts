@@ -1,4 +1,5 @@
 import type { GuiToolsClient } from '../remote-chat/guiTools';
+import type { MappingConsumer } from '../remote-chat/files';
 import type { MappingTunnel, TunnelFactory } from './types';
 import { MAX_PORT_MAPPINGS, MAPPING_PROTOCOLS, mappingConflicts, validPort,
   type MappingMode, type MappingProtocol, type PortMapping } from './settings';
@@ -7,6 +8,7 @@ import { StreamBudget } from './streamBudget';
 import { MAPPING_RECONNECT_REQUIRED, MAPPING_UPDATE_REQUIRED } from './errors';
 
 export type ForwardingClient = Pick<GuiToolsClient['files'], 'openResource' | 'closeResource' | 'link'> & {
+  mappingActive?: GuiToolsClient['files']['mappingActive'];
   stream?: import('./socket').MappingSocketFactory;
 };
 export interface ForwardingEntry extends PortMapping {
@@ -38,8 +40,9 @@ export class PortForwardingService {
   // Bound active TCP work per computer so mappings leave capacity for chat and cleanup.
   private readonly bridgeBudget = new StreamBudget();
 
-  constructor(private readonly client: ForwardingClient, saved: PortMapping[],
+  constructor(private readonly client: ForwardingClient | null, saved: PortMapping[],
     private readonly platform: { createTunnel: TunnelFactory; createId: () => string; mode?: MappingMode;
+      consumer?: () => MappingConsumer | undefined;
       enabledIds?: readonly string[]; validateTarget?: (target: MappingTarget, id?: string) => void }) {
     this.entries = saved.map(entry => ({ ...entry, status: 'stopped',
       ...(platform.enabledIds ? { enabled: platform.enabledIds.includes(entry.id) } : {}) }));
@@ -154,7 +157,7 @@ export class PortForwardingService {
   }
 
   start = async (id: string) => {
-    if (this.disposed) return;
+    if (this.disposed || !this.client) return;
     if (this.platform.enabledIds && this.entries.some(entry => entry.id === id && !entry.enabled)) {
       this.update(id, { enabled: true });
     }
@@ -183,6 +186,9 @@ export class PortForwardingService {
         } while (domain !== this.entries.find(value => value.id === id)?.localDomain);
       }
       this.update(id, { status: 'running' });
+      const consumer = this.platform.consumer?.();
+      // Older hosts can still forward traffic without supporting usage reporting.
+      if (consumer) void this.client.mappingActive?.(job.resource, id, consumer).catch(() => {});
     } catch (reason) {
       const message = reason instanceof Error ? reason.message : String(reason);
       await this.fail(id, job, LOCAL_ERRORS.has(message) ? message : START_ERROR);
@@ -260,7 +266,7 @@ export class PortForwardingService {
     job.resource = undefined;
     try { await job.tunnels.close(); }
     finally {
-      if (resource) await this.client.closeResource(resource)
+      if (resource) await this.client?.closeResource(resource)
         .catch(() => console.warn('Port forwarding remote cleanup failed'));
     }
   }
