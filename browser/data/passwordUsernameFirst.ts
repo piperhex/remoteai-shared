@@ -1,32 +1,9 @@
 import type { Login } from './model';
-import { autocompleteField, clickedSubmitter, formInputs, passwordInput, safeLoginForm } from './passwordPageFields';
+import { clickedSubmitter, loginPage, safeLoginForm } from './passwordPageFields';
+import { commandPassword, commandPasswordIdentity, isCommandPassword, passwordSelector,
+  usernameFirstIdentity } from './passwordUsernameFirstFields';
 
-const USERNAME_STEP_LIFETIME_MS = 10 * 60 * 1000;
 const PASSWORD_STEP_LIFETIME_MS = 30 * 1000;
-const loginButtonName = /^(?:(?:button|btn)[-_]?)?(?:sign[-_]?in|log[-_]?in)(?:[-_]?(?:button|btn))?$/i;
-const passwordSelector = 'input[type=password]';
-
-function isLoginButton(button: HTMLButtonElement) {
-  return button.type === 'button' && !button.form && !button.matches(':disabled')
-    && button.getClientRects().length > 0
-    && [button.id, button.name, button.dataset.testid ?? ''].some(value => loginButtonName.test(value));
-}
-
-function nearbyFields<T extends Element>(element: Element, selector: string, eligible: (field: T) => boolean) {
-  for (let scope = element.parentElement; scope && scope !== document.body; scope = scope.parentElement) {
-    const matches = Array.from(scope.querySelectorAll<T>(selector)).filter(eligible);
-    if (matches.length) return matches;
-  }
-  return [];
-}
-
-function commandPassword(button: HTMLButtonElement) {
-  if (!isLoginButton(button)) return;
-  const fields = nearbyFields<HTMLInputElement>(button, passwordSelector,
-    field => field.getClientRects().length > 0);
-  if (fields.length !== 1 || fields[0].form || fields[0].matches(':disabled, [readonly]')) return;
-  return passwordInput(fields);
-}
 
 function activatedPassword(event: MouseEvent | KeyboardEvent) {
   if (!event.isTrusted || !(event.target instanceof Element)) return;
@@ -36,20 +13,7 @@ function activatedPassword(event: MouseEvent | KeyboardEvent) {
   }
   if (event.key !== 'Enter' || event.isComposing || event.altKey || event.ctrlKey || event.metaKey
     || !(event.target instanceof HTMLInputElement)) return;
-  const buttons = nearbyFields<HTMLButtonElement>(event.target, 'button', isLoginButton);
-  if (buttons.length === 1 && commandPassword(buttons[0]) === event.target) return event.target;
-}
-
-function submittedUsername(form: HTMLFormElement | null, submitter?: HTMLElement | null) {
-  if (!form || !safeLoginForm(form, submitter) || form.matches(':invalid')) return;
-  const fields = formInputs(form);
-  if (fields.some(input => input.type === 'password')) return;
-  const identities = fields.filter(input => {
-    const hint = autocompleteField(input);
-    return ['text', 'email', 'tel'].includes(input.type) && (hint === 'username' || hint === 'email');
-  });
-  const username = identities.length === 1 ? identities[0].value.trim() : '';
-  if (username && username.length <= 512) return { form, username, at: performance.now() };
+  if (isCommandPassword(event.target)) return event.target;
 }
 
 type DocumentNavigation = Event & {
@@ -85,12 +49,16 @@ function watchPasswordStep(input: HTMLInputElement, accepted: () => void, stop: 
 }
 
 export function observeUsernameFirstLogin(offer: (login: Login) => void) {
-  let previous: ReturnType<typeof submittedUsername>;
+  const page = loginPage().__remoteaiLogin;
+  if (!page) return;
   let stopWatching: (() => void) | undefined;
   const stop = () => { stopWatching?.(); stopWatching = undefined; };
   const remember = (form: HTMLFormElement | null, submitter?: HTMLElement | null) => {
-    const username = submittedUsername(form, submitter);
-    if (username) previous = username;
+    if (!form || !safeLoginForm(form, submitter) || form.matches(':invalid')) return;
+    const input = usernameFirstIdentity(form), username = input?.value.trim(), choice = page.usernameChoice;
+    if (!username || username.length > 512) return;
+    const continuationId = choice?.input === input && choice?.username === username ? choice.id : undefined;
+    page.usernameStep = { form, username, at: performance.now(), continuationId };
   };
   document.addEventListener('submit', event => {
     if (event.isTrusted && event.target instanceof HTMLFormElement) remember(event.target, event.submitter);
@@ -99,14 +67,15 @@ export function observeUsernameFirstLogin(offer: (login: Login) => void) {
   const onActivation = (event: MouseEvent | KeyboardEvent) => {
     if (!event.isTrusted || (event instanceof KeyboardEvent && event.key !== 'Enter')) return;
     stop();
-    if (!previous || performance.now() - previous.at > USERNAME_STEP_LIFETIME_MS
-      || (previous.form.isConnected && previous.form.getClientRects().length > 0)) return;
     const input = activatedPassword(event);
     if (!input?.value || input.value.length > 4096) return;
-    const login = { origin: location.origin, username: previous.username, password: input.value };
+    const identity = commandPasswordIdentity(input);
+    if (!identity) return;
+    const login = { origin: location.origin, username: identity.username, password: input.value };
     stopWatching = watchPasswordStep(input, () => {
       stop();
-      previous = undefined;
+      page.usernameStep = undefined;
+      page.usernameChoice = undefined;
       offer(login);
     }, stop);
   };

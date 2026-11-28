@@ -5,7 +5,7 @@ import { ChevronRight, KeyRound, UserRound, X } from 'lucide-react';
 import type { Language } from '@remoteai/i18n';
 import { marketText, type MarketText } from '../../provider-market/i18n';
 import { useBrowserData } from './context';
-import { matchingPasswords, type PasswordFocus } from './passwordFocus';
+import { matchingPasswords, type PasswordFill, type PasswordFocus } from './passwordFocus';
 import type { SavedLogin } from './vault';
 import type { Login } from './model';
 import { VaultUnlock } from './PasswordManager';
@@ -16,7 +16,7 @@ import './passwordSuggestions.css';
 
 export function PasswordSuggestions({ language, tabId, focus, fill, close }: {
   language: Language; tabId: string; focus: PasswordFocus;
-  fill: (login: Login, focusId?: string) => Promise<void>; close: () => void;
+  fill: PasswordFill; close: () => void;
 }) {
   const t = marketText(language), { token } = theme.useToken(), { passwords } = useBrowserData();
   const overlay = useBrowserOverlay();
@@ -26,7 +26,7 @@ export function PasswordSuggestions({ language, tabId, focus, fill, close }: {
   const choose = async (entry: Login) => {
     if (busy) return;
     setBusy(true); setError(false);
-    try { await fill(entry, focus.id); close(); }
+    try { await fill(entry, focus); close(); }
     catch { setError(true); }
     finally { setBusy(false); }
   };

@@ -2,11 +2,14 @@ import type { Login } from './model';
 import type { PasswordFocus } from './passwordFocus';
 
 export interface PasswordPageOptions {
-  action: 'install' | 'take' | 'takeFocus' | 'fill'; login?: Login; focusId?: string; native?: boolean; desktop?: boolean;
+  action: 'install' | 'take' | 'takeFocus' | 'fill' | 'fillUsername';
+  login?: Login; identity?: Pick<Login, 'origin' | 'username'>; focusId?: string; native?: boolean; desktop?: boolean;
 }
 interface PageState {
   installed: boolean; pending: Login | null; pendingFocus?: PasswordFocus | null;
   focus?: { id: string; input: HTMLInputElement };
+  usernameChoice?: { id: string; input: HTMLInputElement; username: string };
+  usernameStep?: { form: HTMLFormElement; username: string; at: number; continuationId?: string };
 }
 export const loginPage = () => window as Window & { __remoteaiLogin?: PageState;
   chrome?: { webview?: { postMessage: (value: unknown) => void } };

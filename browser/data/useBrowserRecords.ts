@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { currentTabPage, type BrowserTab, type BrowserTabPage } from '../../provider-market/browserState';
@@ -7,6 +7,7 @@ import { browserUrl, loginOrigin, type Login } from './model';
 import { newDataId, validateLogin } from './crypto';
 import type { DataControls } from './clear';
 import { usePasswordSuggestions } from './usePasswordSuggestions';
+import type { PasswordFill } from './passwordFocus';
 
 export function useBrowserRecords(options: {
   tabs: BrowserTab[]; activeId: string; active: boolean; closeTabs: (ids: string[]) => void;
@@ -51,7 +52,8 @@ export function useBrowserRecords(options: {
     catch { /* The store exposes persistence failures in the browser data UI. */ }
   }, [store, random]);
   const active = options.tabs.find(tab => tab.id === options.activeId && !tab.dataPage);
-  const suggestions = usePasswordSuggestions(active, options.active);
+  const fill = useMemo(() => passwordFill(active), [active?.id, active?.url, active?.automationThread]);
+  const suggestions = usePasswordSuggestions(active, options.active, fill);
   useEffect(() => {
     if (!desktop || !options.active || !active) return;
     const unlisten = listen<Login>(`browser-login-${active.id}`, event => {
@@ -86,13 +88,20 @@ export function useBrowserRecords(options: {
     closeTabs: options.closeTabs,
     clearSiteData: desktop ? request => invoke('provider_browser_clear_data', { request }) : undefined,
   };
-  return { controls, fill: passwordFill(active), candidate, closeCapture, recordVisit, updatePage, pages, ...suggestions };
+  return { controls, candidate, closeCapture, recordVisit, updatePage, pages, ...suggestions };
 }
 
-export function passwordFill(tab: BrowserTab | undefined) {
+export function passwordFill(tab: BrowserTab | undefined): PasswordFill | undefined {
   if (!isTauri() || !tab || tab.automationThread || !loginOrigin(tab.url)) return undefined;
-  return async (login: Login, focusId?: string) => {
+  return async (login, focus) => {
     const { origin, username, password } = login;
+    const focusId = focus?.id;
+    if (username && (!focus || focus.stage === 'username')) {
+      const filled = await invoke<boolean>('provider_browser_password', { id: tab.id,
+        request: { action: 'fillUsername', identity: { origin, username }, focusId } });
+      if (filled) return;
+    }
+    if (focus?.stage === 'username') throw new Error('password-fill');
     const done = await invoke<boolean>('provider_browser_password', { id: tab.id,
       request: { action: 'fill', login: { origin, username, password }, focusId } });
     if (!done) throw new Error('password-fill');
