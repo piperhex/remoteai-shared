@@ -36,14 +36,15 @@ import { useLoungeDrafts } from './useLoungeDrafts';
 export function LoungePage(props: {
   controller: LoungeController; onLogin?: () => void; mobile?: boolean; onBack?: () => void;
   onAssistance?: RequestLoungeAssistance;
+  messageTarget?: LoungeReply;
 }) {
   return props.mobile ? <MobileLoungePage key={props.controller.snapshot().user?.id} {...props} />
     : <LoungeAssistanceProvider request={props.onAssistance}>
       <DesktopLoungePage {...props} /></LoungeAssistanceProvider>;
 }
 
-function DesktopLoungePage({ controller, onLogin, mobile = false }: {
-  controller: LoungeController; onLogin?: () => void; mobile?: boolean;
+function DesktopLoungePage({ controller, onLogin, mobile = false, messageTarget }: {
+  controller: LoungeController; onLogin?: () => void; mobile?: boolean; messageTarget?: LoungeReply;
 }) {
   const state = useSyncExternalStore(controller.subscribe, controller.snapshot);
   const navigation = useLoungeNavigation(controller, state);
@@ -83,6 +84,9 @@ function DesktopLoungePage({ controller, onLogin, mobile = false }: {
     if (!await navigation.locate(reference)) return;
     setAtBottom(false); setHistoryOpen(false);
   };
+  useEffect(() => {
+    if (messageTarget) void locate(messageTarget);
+  }, [controller, messageTarget]);
   useLayoutEffect(() => {
     if (!navigation.focus) return;
     const frame = requestAnimationFrame(() => scrollToLoungeMessage(list.current, navigation.focus!.key));

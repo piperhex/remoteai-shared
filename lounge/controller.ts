@@ -28,6 +28,7 @@ import { parseClientVersion } from './clientVersion';
 import { LoungeGroupReadViewport, type GroupReadViewing, type GroupReadVisibility } from './groupReadViewport';
 import { LoungeDeletions } from './deletions';
 import { BookmarkChannel } from '../browser/bookmarks/channel';
+import { UnreadDirectMessages } from './unreadDirectMessages';
 
 const HEARTBEAT_MS = 20_000;
 const STALE_MS = 65_000;
@@ -56,6 +57,7 @@ export class LoungeController {
   private historyFailures = 0;
   private imageReceipts = false;
   private recent: LoungeMessage[] = [];
+  private readonly unreadDirect?: UnreadDirectMessages;
   private watched = '';
   private readonly directState = new LoungeDirectState();
   private historyEpoch = 0;
@@ -83,6 +85,7 @@ export class LoungeController {
     && this.transport.send(this.socket, frame), () => this.runtime.randomId());
 
   constructor(private readonly session?: LoungeSession, private readonly runtime: LoungeRuntime = browserLoungeRuntime) {
+    if (session?.trackUnreadDirectMessages) this.unreadDirect = new UnreadDirectMessages();
     this.backoff = new ReconnectBackoff({ maximumMs: 15_000, random: runtime.retryRandom });
     this.profiles = new LoungeProfiles(session?.avatars);
     this.deletions = new LoungeDeletions(session?.history);
@@ -130,6 +133,7 @@ export class LoungeController {
     });
   }
   snapshot = () => this.state;
+  unreadDirectNotifications() { return this.unreadDirect?.notifications() ?? []; }
   recentSpeakers = (after = -Infinity) => recentSpeakers(this.recent, this.state.user?.id, after)
     .map(user => this.profiles.user(user));
   get historyScope() {
@@ -156,6 +160,7 @@ export class LoungeController {
   }
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => this.listeners.delete(listener); };
   private update(value: Partial<LoungeSnapshot>) {
+    if (value.blocked || value.mutedConversations) this.unreadDirect?.discardPeers(value.blocked, value.mutedConversations);
     this.state = this.profiles.decorate({ ...this.state, ...value });
     this.state.unread = notificationUnread(this.state);
     this.listeners.forEach(listener => listener());
@@ -199,6 +204,7 @@ export class LoungeController {
     this.unsubscribe = undefined;
     this.disconnect();
     this.recent = [];
+    this.unreadDirect?.clear();
     this.directState.clear();
     this.deletions.clear();
     this.groupViewport.clear();
@@ -227,7 +233,9 @@ export class LoungeController {
   private markRead() {
     if (this.canRead()) this.delivery.read(this.state.messages.filter(message => !!message.recipient));
     this.groupViewport.refresh();
-    if (!this.canRead() || !this.state.unreadByConversation[this.state.conversation]) return;
+    if (!this.canRead()) return;
+    const clearedAlerts = this.unreadDirect?.readConversation(this.state.conversation);
+    if (!clearedAlerts && !this.state.unreadByConversation[this.state.conversation]) return;
     const unreadByConversation = { ...this.state.unreadByConversation, [this.state.conversation]: 0 };
     this.update({ unreadByConversation, unread: Object.values(unreadByConversation).reduce((sum, n) => sum + n, 0) });
   }
@@ -420,6 +428,8 @@ export class LoungeController {
     const unreadByConversation = { ...this.state.unreadByConversation };
     if (!own && (!this.canRead() || conversation !== this.state.conversation)) {
       unreadByConversation[conversation] = (unreadByConversation[conversation] ?? 0) + 1;
+      if (message.recipient && conversation && !this.state.mutedConversations?.includes(conversation)
+        && message.delivery?.status !== 'read') this.unreadDirect?.add(message);
     }
     this.update({ messages, unreadByConversation,
       unread: Object.values(unreadByConversation).reduce((sum, n) => sum + n, 0) });
@@ -455,6 +465,7 @@ export class LoungeController {
     if (!this.running) return;
     messages = messages.filter(message => this.isCurrentMessage(message));
     this.delivery.restoreGroups(messages);
+    this.clearSyncedDirectAlerts(messages);
     const merged = synchronizedSnapshot(this.state, messages, this.recent);
     this.recent = merged.recent; this.update(merged.change);
     for (const message of messages) {
@@ -464,6 +475,14 @@ export class LoungeController {
     }
     this.markRead();
   }
+  private clearSyncedDirectAlerts(messages: LoungeMessage[]) {
+    if (!this.unreadDirect) return;
+    for (const message of messages) {
+      if (message.delivery?.direction === 'incoming' && message.delivery.status === 'read') {
+        this.unreadDirect.read(message);
+      }
+    }
+  }
   private async publishDirect(message: LoungeMessage, fresh: boolean) {
     const lifecycle = this.lifecycle;
     if (!this.isCurrentMessage(message)) throw new Error('client.lounge.conversationReset');
@@ -471,6 +490,7 @@ export class LoungeController {
     if (this.lifecycle !== lifecycle || !this.isCurrentMessage(message)) throw new Error('client.lounge.sendFailed');
     if (fresh) this.append(message, true);
     else {
+      this.clearSyncedDirectAlerts([message]);
       const replace = (previous: LoungeMessage) => historyKey(previous) === historyKey(message) ? message : previous;
       this.recent = this.recent.map(replace);
       this.update({ messages: this.state.messages.map(replace) });
@@ -642,6 +662,7 @@ export class LoungeController {
       await this.session?.history?.deleteBefore?.(userId, deletedAt);
       if (lifecycle !== this.lifecycle) return;
       this.deletions.remember(userId, deletedAt);
+      this.unreadDirect?.readConversation(userId, deletedAt);
       this.attachments.removeBefore(userId, deletedAt);
       this.historyEpoch++;
       const removed = removedConversation({ state: this.state, peer: userId, deletedAt, recent: this.recent });

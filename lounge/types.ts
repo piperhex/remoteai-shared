@@ -40,6 +40,7 @@ export interface LoungeDraft {
 }
 export interface LoungePolicy { moderator: boolean; mutedUntil: string | null }
 export interface LoungeSession {
+  trackUnreadDirectMessages?: boolean;
   clientVersion?: string;
   clientPlatform?: import('./clientVersion').LoungeClientPlatform;
   attachmentImages?: import('./attachmentCache').AttachmentImageStore;
