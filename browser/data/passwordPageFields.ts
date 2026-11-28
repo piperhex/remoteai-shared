@@ -13,10 +13,22 @@ export const loginPage = () => window as Window & { __remoteaiLogin?: PageState;
   ReactNativeWebView?: { postMessage: (value: string) => void } };
 export const formInputs = (form: HTMLFormElement) => Array.from(form.querySelectorAll<HTMLInputElement>('input'))
   .filter(input => !input.disabled && input.type !== 'hidden' && input.getClientRects().length > 0);
-export const usernameInput = (fields: HTMLInputElement[]) => fields.find(input => input.autocomplete === 'username')
+export const autocompleteField = (input: HTMLInputElement) => input.autocomplete.trim().toLowerCase().split(/\s+/)
+  .filter(token => token !== 'webauthn').pop();
+export const usernameInput = (fields: HTMLInputElement[]) => fields.find(input => autocompleteField(input) === 'username')
+  ?? fields.find(input => ['text', 'email', 'tel'].includes(input.type)
+    && [input.name, input.id].some(value => value.toLowerCase() === 'username'))
   ?? fields.find(input => input.type === 'email') ?? fields.find(input => ['text', 'tel'].includes(input.type));
 export const passwordInput = (fields: HTMLInputElement[]) => fields.find(input => input.type === 'password'
-  && input.autocomplete !== 'new-password');
+  && autocompleteField(input) !== 'new-password');
+
+export function clickedSubmitter(event: MouseEvent) {
+  if (!event.isTrusted || !(event.target instanceof Element)) return;
+  const control = event.target.closest('button, input');
+  if (!(control instanceof HTMLButtonElement || control instanceof HTMLInputElement)) return;
+  if ((control.type === 'submit' || control.type === 'image') && !control.matches(':disabled')) return control;
+}
+
 export function safeLoginForm(form: HTMLFormElement, submitter?: HTMLElement | null) {
   try {
     const override = submitter?.getAttribute('formaction');

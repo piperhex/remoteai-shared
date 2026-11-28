@@ -1,6 +1,7 @@
 import type { Login } from './model';
-import { formInputs, loginPage, passwordInput, postLoginMessage, safeLoginForm, usernameInput,
+import { clickedSubmitter, formInputs, loginPage, passwordInput, postLoginMessage, safeLoginForm, usernameInput,
   type PasswordPageOptions } from './passwordPageFields';
+import { observeUsernameFirstLogin } from './passwordUsernameFirst';
 
 function readLogin(form: HTMLFormElement, commandClick: boolean): Login | undefined {
   const fields = formInputs(form);
@@ -17,14 +18,8 @@ function offerLogin(options: PasswordPageOptions, login: Login) {
   }
 }
 
-function clickedSubmitter(event: MouseEvent) {
-  if (!event.isTrusted || !(event.target instanceof Element)) return;
-  const control = event.target.closest('button, input');
-  if (!(control instanceof HTMLButtonElement || control instanceof HTMLInputElement)) return;
-  if ((control.type === 'submit' || control.type === 'image') && !control.matches(':disabled')) return control;
-}
-
 export function observeLoginSubmissions(options: PasswordPageOptions) {
+  observeUsernameFirstLogin(login => offerLogin(options, login));
   const pending = new WeakMap<HTMLFormElement, Login>();
   document.addEventListener('submit', event => {
     const form = event.target;
