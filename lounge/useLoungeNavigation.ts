@@ -25,7 +25,7 @@ export function useLoungeNavigation(controller: LoungeController, state: LoungeS
     const timer = setTimeout(() => setHighlight(undefined), HIGHLIGHT_MS);
     return () => clearTimeout(timer);
   }, [focus]);
-  const locate = async (reference: LoungeReply) => {
+  const resolve = async (reference: LoungeReply, keepLiveAtLatest: boolean) => {
     const current = ++request.current;
     const conversation = controller.snapshot().conversation;
     setError(undefined);
@@ -35,6 +35,11 @@ export function useLoungeNavigation(controller: LoungeController, state: LoungeS
       if (!original) { setError('client.lounge.originalMissing'); return false; }
       const key = historyKey(original);
       let context = controller.snapshot().messages;
+      const latest = context.at(-1);
+      if (keepLiveAtLatest && latest && historyKey(latest) === key) {
+        setFocus({ owner: controller, key, request: current, conversation });
+        return 'latest' as const;
+      }
       if (!context.some(message => historyKey(message) === key)) {
         // The original is already persisted; unrelated incoming writes must not delay navigation.
         const page = await controller.searchHistory({ query: '', conversation,
@@ -43,7 +48,7 @@ export function useLoungeNavigation(controller: LoungeController, state: LoungeS
       }
       if (current !== request.current) return false;
       setFocus({ owner: controller, key, request: current, conversation, context });
-      return true;
+      return 'history' as const;
     } catch {
       if (current === request.current) setError('client.lounge.originalLoadFailed');
       return false;
@@ -52,5 +57,7 @@ export function useLoungeNavigation(controller: LoungeController, state: LoungeS
   const active = focus?.owner === controller && focus.conversation === state.conversation ? focus : undefined;
   const messages = active?.context?.map(message => message.sender.id === state.user?.id
     ? { ...message, sender: state.user } : message) ?? state.messages;
-  return { focus: active, highlight, error, locate, clear, messages };
+  return { focus: active?.context ? active : undefined, highlight, error, clear, messages,
+    locate: async (reference: LoungeReply) => !!await resolve(reference, false),
+    locateTrayMessage: (reference: LoungeReply) => resolve(reference, true) };
 }

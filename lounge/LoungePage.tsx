@@ -52,6 +52,8 @@ function DesktopLoungePage({ controller, onLogin, mobile = false, messageTarget 
   const list = useRef<HTMLDivElement>(null);
   const composer = useRef<LoungeComposerHandle>(null);
   const [atBottom, setAtBottom] = useState(true);
+  const [handledMessageTarget, setHandledMessageTarget] = useState<LoungeReply>();
+  const locatingMessageTarget = !!messageTarget && messageTarget !== handledMessageTarget;
   const [preview, setPreview] = useState<string>();
   const [moderating, setModerating] = useState<LoungeAccount>();
   const [avatarOpen, setAvatarOpen] = useState(false);
@@ -85,7 +87,17 @@ function DesktopLoungePage({ controller, onLogin, mobile = false, messageTarget 
     setAtBottom(false); setHistoryOpen(false);
   };
   useEffect(() => {
-    if (messageTarget) void locate(messageTarget);
+    if (!messageTarget) return;
+    let active = true;
+    void navigation.locateTrayMessage(messageTarget).then(result => {
+      if (!active) return;
+      if (result) {
+        setAtBottom(result === 'latest');
+        setHistoryOpen(false);
+      }
+      setHandledMessageTarget(messageTarget);
+    });
+    return () => { active = false; };
   }, [controller, messageTarget]);
   useLayoutEffect(() => {
     if (!navigation.focus) return;
@@ -104,10 +116,11 @@ function DesktopLoungePage({ controller, onLogin, mobile = false, messageTarget 
   useEffect(() => {
     controller.setGroupViewing({ thread: !historyOpen && !avatarOpen && !peopleOpen && !preview
       && !moderating && !blocking && !newChatOpen && !profile && !deletion.user, history: historyOpen && !preview });
-    controller.setViewing(atBottom && !navigation.focus && !historyOpen && !avatarOpen && !peopleOpen
-      && !preview && !moderating && !blocking && !newChatOpen && !profile && !deletion.user);
+    controller.setViewing(atBottom && !locatingMessageTarget && !navigation.focus
+      && !historyOpen && !avatarOpen && !peopleOpen && !preview
+      && !moderating && !blocking && !newChatOpen && !profile && !deletion.user);
     return () => { controller.setViewing(false); controller.setGroupViewing({ thread: false, history: false }); };
-  }, [controller, atBottom, historyOpen, avatarOpen, peopleOpen, preview, moderating, blocking,
+  }, [controller, atBottom, locatingMessageTarget, historyOpen, avatarOpen, peopleOpen, preview, moderating, blocking,
     navigation.focus, newChatOpen, profile, deletion.user]);
   useLayoutEffect(() => { if (atBottom && list.current) list.current.scrollTop = list.current.scrollHeight; },
     [state.messages, atBottom]);

@@ -610,7 +610,8 @@ export class LoungeController {
   moderate(userId: string, minutes: number): Promise<void> {
     return this.submit({ type: 'moderate', userId, minutes });
   }
-  selectConversation(user?: LoungeSnapshot['user']) {
+  selectConversation(user?: LoungeSnapshot['user'], options?: { deferRead?: boolean }) {
+    if (options?.deferRead) this.viewing = false;
     const conversation = user?.id ?? '';
     if (user && user.id !== this.state.user?.id) this.contactSync.remember({ user, direct: true });
     if (conversation === this.state.conversation) return;
